@@ -9,8 +9,20 @@
 #import <UIKit/UIKit.h>
 
 @class HMSegmentedControl;
+@class HMSegmentItem;
 
-typedef void (^IndexChangeBlock)(NSInteger index);
+@interface HMSegmentItem : NSObject
+
+@property (nonatomic, strong) NSNumber *segmentIdentifier;
+@property (nonatomic, strong) NSString *segmentTitle;
+@property (nonatomic, strong) UIImage *segmentImage;
+@property (nonatomic, strong) UIImage *selectedSegmentImage;
+
+@end
+
+
+
+typedef void (^IndexChangeBlock)(HMSegmentItem *segmentItem);
 typedef NSAttributedString *(^HMTitleFormatterBlock)(HMSegmentedControl *segmentedControl, NSString *title, NSUInteger index, BOOL selected);
 
 typedef NS_ENUM(NSInteger, HMSegmentedControlSelectionStyle) {
@@ -57,11 +69,10 @@ typedef NS_ENUM(NSInteger, HMSegmentedControlImagePosition) {
     HMSegmentedControlImagePositionBelowText
 };
 
+
 @interface HMSegmentedControl : UIControl
 
-@property (nonatomic, strong) NSArray<NSString *> *sectionTitles;
-@property (nonatomic, strong) NSArray<UIImage *> *sectionImages;
-@property (nonatomic, strong) NSArray<UIImage *> *sectionSelectedImages;
+@property (nonatomic, strong) NSArray<HMSegmentItem *> *sectionItems;
 
 /**
  Provide a block to be executed when selected index is changed.
@@ -252,10 +263,9 @@ typedef NS_ENUM(NSInteger, HMSegmentedControlImagePosition) {
  */
 @property (nonatomic) BOOL shouldAnimateUserSelection;
 
-- (id)initWithSectionTitles:(NSArray<NSString *> *)sectiontitles;
-- (id)initWithSectionImages:(NSArray<UIImage *> *)sectionImages sectionSelectedImages:(NSArray<UIImage *> *)sectionSelectedImages;
-- (instancetype)initWithSectionImages:(NSArray<UIImage *> *)sectionImages sectionSelectedImages:(NSArray<UIImage *> *)sectionSelectedImages titlesForSections:(NSArray<NSString *> *)sectiontitles;
+- (id)initWithSectionItems:(NSArray<HMSegmentItem *> *)sectionItems type:(HMSegmentedControlType)type;
 - (void)setSelectedSegmentIndex:(NSUInteger)index animated:(BOOL)animated;
+- (void)setSelectedSegmentIndexWithIdentifier:(NSNumber*)indexIdentifier animated:(BOOL)animated;
 - (void)setIndexChangeBlock:(IndexChangeBlock)indexChangeBlock;
 - (void)setTitleFormatter:(HMTitleFormatterBlock)titleFormatter;
 
