@@ -10,6 +10,10 @@
 #import <QuartzCore/QuartzCore.h>
 #import <math.h>
 
+@implementation HMSegmentItem
+
+@end
+
 @interface HMScrollView : UIScrollView
 @end
 
@@ -72,48 +76,17 @@
     return self;
 }
 
-- (id)initWithSectionTitles:(NSArray<NSString *> *)sectiontitles {
+- (id)initWithSectionItems:(NSArray<HMSegmentItem *> *)sectionItems type:(HMSegmentedControlType)type {
     self = [super initWithFrame:CGRectZero];
     
     if (self) {
         [self commonInit];
-        self.sectionTitles = sectiontitles;
-        self.type = HMSegmentedControlTypeText;
+        self.sectionItems = sectionItems;
+        self.type = type ?: HMSegmentedControlTypeText;
     }
     
     return self;
-}
 
-- (id)initWithSectionImages:(NSArray<UIImage *> *)sectionImages sectionSelectedImages:(NSArray<UIImage *> *)sectionSelectedImages {
-    self = [super initWithFrame:CGRectZero];
-    
-    if (self) {
-        [self commonInit];
-        self.sectionImages = sectionImages;
-        self.sectionSelectedImages = sectionSelectedImages;
-        self.type = HMSegmentedControlTypeImages;
-    }
-    
-    return self;
-}
-
-- (instancetype)initWithSectionImages:(NSArray<UIImage *> *)sectionImages sectionSelectedImages:(NSArray<UIImage *> *)sectionSelectedImages titlesForSections:(NSArray<NSString *> *)sectiontitles {
-	self = [super initWithFrame:CGRectZero];
-    
-    if (self) {
-        [self commonInit];
-		
-		if (sectionImages.count != sectiontitles.count) {
-			[NSException raise:NSRangeException format:@"***%s: Images bounds (%ld) Don't match Title bounds (%ld)", sel_getName(_cmd), (unsigned long)sectionImages.count, (unsigned long)sectiontitles.count];
-        }
-		
-        self.sectionImages = sectionImages;
-        self.sectionSelectedImages = sectionSelectedImages;
-		self.sectionTitles = sectiontitles;
-        self.type = HMSegmentedControlTypeTextImages;
-    }
-    
-    return self;
 }
 
 - (void)awakeFromNib {
@@ -174,15 +147,8 @@
     [self updateSegmentsRects];
 }
 
-- (void)setSectionTitles:(NSArray<NSString *> *)sectionTitles {
-    _sectionTitles = sectionTitles;
-    
-    [self setNeedsLayout];
-    [self setNeedsDisplay];
-}
-
-- (void)setSectionImages:(NSArray<UIImage *> *)sectionImages {
-    _sectionImages = sectionImages;
+- (void)setSectionItems:(NSArray<HMSegmentItem *> *)sectionItems {
+    _sectionItems = sectionItems;
     
     [self setNeedsLayout];
     [self setNeedsDisplay];
@@ -219,11 +185,12 @@
 #pragma mark - Drawing
 
 - (CGSize)measureTitleAtIndex:(NSUInteger)index {
-    if (index >= self.sectionTitles.count) {
+    if (index >= self.sectionItems.count) {
         return CGSizeZero;
     }
     
-    id title = self.sectionTitles[index];
+    HMSegmentItem *item = self.sectionItems[index];
+    id title = item.segmentTitle;
     CGSize size = CGSizeZero;
     BOOL selected = (index == self.selectedSegmentIndex) ? YES : NO;
     if ([title isKindOfClass:[NSString class]] && !self.titleFormatter) {
@@ -243,7 +210,8 @@
 }
 
 - (NSAttributedString *)attributedTitleAtIndex:(NSUInteger)index {
-    id title = self.sectionTitles[index];
+    HMSegmentItem *item = self.sectionItems[index];
+    id title = item.segmentTitle;
     BOOL selected = (index == self.selectedSegmentIndex) ? YES : NO;
     
     if ([title isKindOfClass:[NSAttributedString class]]) {
@@ -285,7 +253,7 @@
     CGRect oldRect = rect;
     
     if (self.type == HMSegmentedControlTypeText) {
-        [self.sectionTitles enumerateObjectsUsingBlock:^(id titleString, NSUInteger idx, BOOL *stop) {
+        [self.sectionItems enumerateObjectsUsingBlock:^(HMSegmentItem *item, NSUInteger idx, BOOL *stop) {
 
             CGFloat stringWidth = 0;
             CGFloat stringHeight = 0;
@@ -348,8 +316,8 @@
             [self addBackgroundAndBorderLayerWithRect:fullRect];
         }];
     } else if (self.type == HMSegmentedControlTypeImages) {
-        [self.sectionImages enumerateObjectsUsingBlock:^(id iconImage, NSUInteger idx, BOOL *stop) {
-            UIImage *icon = iconImage;
+        [self.sectionItems enumerateObjectsUsingBlock:^(HMSegmentItem *item, NSUInteger idx, BOOL *stop) {
+            UIImage *icon = item.segmentImage;
             CGFloat imageWidth = icon.size.width;
             CGFloat imageHeight = icon.size.height;
             CGFloat y = roundf(CGRectGetHeight(self.frame) - self.selectionIndicatorHeight) / 2 - imageHeight / 2 + ((self.selectionIndicatorLocation == HMSegmentedControlSelectionIndicatorLocationUp) ? self.selectionIndicatorHeight : 0);
@@ -360,8 +328,8 @@
             imageLayer.frame = rect;
             
             if (self.selectedSegmentIndex == idx) {
-                if (self.sectionSelectedImages) {
-                    UIImage *highlightIcon = [self.sectionSelectedImages objectAtIndex:idx];
+                if (item.selectedSegmentImage) {
+                    UIImage *highlightIcon = item.selectedSegmentImage;
                     imageLayer.contents = (id)highlightIcon.CGImage;
                 } else {
                     imageLayer.contents = (id)icon.CGImage;
@@ -383,8 +351,8 @@
             [self addBackgroundAndBorderLayerWithRect:rect];
         }];
     } else if (self.type == HMSegmentedControlTypeTextImages){
-		[self.sectionImages enumerateObjectsUsingBlock:^(id iconImage, NSUInteger idx, BOOL *stop) {
-            UIImage *icon = iconImage;
+		[self.sectionItems enumerateObjectsUsingBlock:^(HMSegmentItem *item, NSUInteger idx, BOOL *stop) {
+            UIImage *icon = item.segmentImage;
             CGFloat imageWidth = icon.size.width;
             CGFloat imageHeight = icon.size.height;
 			
@@ -474,8 +442,8 @@
             imageLayer.frame = imageRect;
 			
             if (self.selectedSegmentIndex == idx) {
-                if (self.sectionSelectedImages) {
-                    UIImage *highlightIcon = [self.sectionSelectedImages objectAtIndex:idx];
+                if (item.selectedSegmentImage) {
+                    UIImage *highlightIcon = item.selectedSegmentImage;
                     imageLayer.contents = (id)highlightIcon.CGImage;
                 } else {
                     imageLayer.contents = (id)icon.CGImage;
@@ -593,16 +561,17 @@
     
     CGFloat sectionWidth = 0.0f;
     
+    HMSegmentItem *item = [self.sectionItems objectAtIndex:self.selectedSegmentIndex];
     if (self.type == HMSegmentedControlTypeText) {
         CGFloat stringWidth = [self measureTitleAtIndex:self.selectedSegmentIndex].width;
         sectionWidth = stringWidth;
     } else if (self.type == HMSegmentedControlTypeImages) {
-        UIImage *sectionImage = [self.sectionImages objectAtIndex:self.selectedSegmentIndex];
+        UIImage *sectionImage = item.segmentImage;
         CGFloat imageWidth = sectionImage.size.width;
         sectionWidth = imageWidth;
     } else if (self.type == HMSegmentedControlTypeTextImages) {
 		CGFloat stringWidth = [self measureTitleAtIndex:self.selectedSegmentIndex].width;
-		UIImage *sectionImage = [self.sectionImages objectAtIndex:self.selectedSegmentIndex];
+		UIImage *sectionImage = item.segmentImage;
 		CGFloat imageWidth = sectionImage.size.width;
         sectionWidth = MAX(stringWidth, imageWidth);
 	}
@@ -669,7 +638,7 @@
     }
     
     if (self.type == HMSegmentedControlTypeText && self.segmentWidthStyle == HMSegmentedControlSegmentWidthStyleFixed) {
-        [self.sectionTitles enumerateObjectsUsingBlock:^(id titleString, NSUInteger idx, BOOL *stop) {
+        [self.sectionItems enumerateObjectsUsingBlock:^(HMSegmentItem *item, NSUInteger idx, BOOL *stop) {
             CGFloat stringWidth = [self measureTitleAtIndex:idx].width + self.segmentEdgeInset.left + self.segmentEdgeInset.right;
             self.segmentWidth = MAX(stringWidth, self.segmentWidth);
         }];
@@ -677,7 +646,7 @@
         NSMutableArray *mutableSegmentWidths = [NSMutableArray array];
         __block CGFloat totalWidth = 0.0;
 
-        [self.sectionTitles enumerateObjectsUsingBlock:^(id titleString, NSUInteger idx, BOOL *stop) {
+        [self.sectionItems enumerateObjectsUsingBlock:^(HMSegmentItem *item, NSUInteger idx, BOOL *stop) {
             CGFloat stringWidth = [self measureTitleAtIndex:idx].width + self.segmentEdgeInset.left + self.segmentEdgeInset.right;
             totalWidth += stringWidth;
             [mutableSegmentWidths addObject:[NSNumber numberWithFloat:stringWidth]];
@@ -694,13 +663,14 @@
 
         self.segmentWidthsArray = [mutableSegmentWidths copy];
     } else if (self.type == HMSegmentedControlTypeImages) {
-        for (UIImage *sectionImage in self.sectionImages) {
+        for (HMSegmentItem *item in self.sectionItems) {
+            UIImage *sectionImage = item.segmentImage;
             CGFloat imageWidth = sectionImage.size.width + self.segmentEdgeInset.left + self.segmentEdgeInset.right;
             self.segmentWidth = MAX(imageWidth, self.segmentWidth);
         }
     } else if (self.type == HMSegmentedControlTypeTextImages && self.segmentWidthStyle == HMSegmentedControlSegmentWidthStyleFixed){
         //lets just use the title.. we will assume it is wider then images...
-        [self.sectionTitles enumerateObjectsUsingBlock:^(id titleString, NSUInteger idx, BOOL *stop) {
+        [self.sectionItems enumerateObjectsUsingBlock:^(HMSegmentItem *item, NSUInteger idx, BOOL *stop) {
             CGFloat stringWidth = [self measureTitleAtIndex:idx].width + self.segmentEdgeInset.left + self.segmentEdgeInset.right;
             self.segmentWidth = MAX(stringWidth, self.segmentWidth);
         }];
@@ -708,10 +678,9 @@
         NSMutableArray *mutableSegmentWidths = [NSMutableArray array];
         __block CGFloat totalWidth = 0.0;
         
-        int i = 0;
-        [self.sectionTitles enumerateObjectsUsingBlock:^(id titleString, NSUInteger idx, BOOL *stop) {
+        [self.sectionItems enumerateObjectsUsingBlock:^(HMSegmentItem *item, NSUInteger idx, BOOL *stop) {
             CGFloat stringWidth = [self measureTitleAtIndex:idx].width + self.segmentEdgeInset.right;
-            UIImage *sectionImage = [self.sectionImages objectAtIndex:i];
+            UIImage *sectionImage = item.segmentImage;
             CGFloat imageWidth = sectionImage.size.width + self.segmentEdgeInset.left;
             
             CGFloat combinedWidth = 0.0;
@@ -743,14 +712,7 @@
 }
 
 - (NSUInteger)sectionCount {
-    if (self.type == HMSegmentedControlTypeText) {
-        return self.sectionTitles.count;
-    } else if (self.type == HMSegmentedControlTypeImages ||
-               self.type == HMSegmentedControlTypeTextImages) {
-        return self.sectionImages.count;
-    }
-    
-    return 0;
+    return self.sectionItems.count;
 }
 
 - (void)willMoveToSuperview:(UIView *)newSuperview {
@@ -758,7 +720,7 @@
     if (newSuperview == nil)
         return;
     
-    if (self.sectionTitles || self.sectionImages) {
+    if (self.sectionItems) {
         [self updateSegmentsRects];
     }
 }
@@ -794,12 +756,8 @@
         
         NSUInteger sectionsCount = 0;
         
-        if (self.type == HMSegmentedControlTypeImages) {
-            sectionsCount = [self.sectionImages count];
-        } else if (self.type == HMSegmentedControlTypeTextImages || self.type == HMSegmentedControlTypeText) {
-            sectionsCount = [self.sectionTitles count];
-        }
-        
+        sectionsCount = [self.sectionItems count];
+
         if (segment != self.selectedSegmentIndex && segment < sectionsCount) {
             // Check if we have to do anything with the touch event
             if (self.isTouchEnabled)
@@ -812,11 +770,11 @@
 
 - (CGFloat)totalSegmentedControlWidth {
     if (self.type == HMSegmentedControlTypeText && self.segmentWidthStyle == HMSegmentedControlSegmentWidthStyleFixed) {
-        return self.sectionTitles.count * self.segmentWidth;
+        return self.sectionItems.count * self.segmentWidth;
     } else if (self.segmentWidthStyle == HMSegmentedControlSegmentWidthStyleDynamic) {
         return [[self.segmentWidthsArray valueForKeyPath:@"@sum.self"] floatValue];
     } else {
-        return self.sectionImages.count * self.segmentWidth;
+        return self.sectionItems.count * self.segmentWidth;
     }
 }
 
@@ -856,6 +814,15 @@
 }
 
 #pragma mark - Index Change
+
+- (void)setSelectedSegmentIndexWithIdentifier:(NSNumber*)indexIdentifier animated:(BOOL)animated {
+    NSPredicate *bPredicate = [NSPredicate predicateWithFormat:@"SELF.segmentIdentifier == %@", indexIdentifier];
+    NSArray *filteredArray = [self.sectionItems filteredArrayUsingPredicate:bPredicate];
+    if (filteredArray.count > 0) {
+        NSInteger index = [self.sectionItems indexOfObject:filteredArray.firstObject];
+        [self setSelectedSegmentIndex:index animated:animated notify:NO];
+    }
+}
 
 - (void)setSelectedSegmentIndex:(NSInteger)index {
     [self setSelectedSegmentIndex:index animated:NO notify:NO];
@@ -939,7 +906,7 @@
         [self sendActionsForControlEvents:UIControlEventValueChanged];
     
     if (self.indexChangeBlock)
-        self.indexChangeBlock(index);
+        self.indexChangeBlock([self.sectionItems objectAtIndex:index]);
 }
 
 #pragma mark - Styling Support
